@@ -2,6 +2,7 @@ package model;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
+import java.util.Date;
 
 /**
  * Created by jzhang on 06/03/2015.
@@ -25,7 +26,7 @@ public class Magasin {
     private String fax;
     private String horaire;
     private String contact;
-    private Timestamp lastUpdateDate;
+    private Timestamp lastUpdateDate = new Timestamp(new Date().getTime());
     private Enseigne enseigneByEnseigneId;
 
     @Id
@@ -185,7 +186,7 @@ public class Magasin {
     }
 
     public void setHoraire(String horaire) {
-        this.horaire = horaire;
+        this.horaire = horaire.replaceAll("\n"," ").trim();
     }
 
     @Basic

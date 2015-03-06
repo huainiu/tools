@@ -6,7 +6,7 @@
         <class>model.Catalogue</class>
         <class>model.Enseigne</class>
         <class>model.Magasin</class>
-        <class>model.Magasincatalogue</class>
+        <class>model.MagasincataloguePK</class>
         <class>model.Occurence</class>
         <class>model.Productimage</class>
         <properties>

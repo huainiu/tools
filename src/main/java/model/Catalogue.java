@@ -5,6 +5,7 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import java.sql.Timestamp;
+import java.util.Date;
 
 /**
  * Created by jzhang on 06/03/2015.
@@ -12,8 +13,9 @@ import java.sql.Timestamp;
 @Entity
 public class Catalogue {
     private int id;
-    private String uniqueId;
-    private Timestamp dateImport;
+    private int enseigne_id=1;
+    private String uniqueId="";
+    private Timestamp dateImport = new Timestamp(new Date().getTime());
     private Timestamp dateExport;
     private String libelle;
     private String slug;
@@ -33,6 +35,16 @@ public class Catalogue {
     public void setId(int id) {
         this.id = id;
     }
+
+    @Basic
+    @Column(name = "enseigne_id")
+    public int getEnseigne_id() {
+        return enseigne_id;
+    }
+    public void setEnseigne_id(int enseigne_id) {
+        this.enseigne_id = enseigne_id;
+    }
+
 
     @Basic
     @Column(name = "unique_id")
