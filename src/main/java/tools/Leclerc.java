@@ -46,24 +46,30 @@ public class Leclerc {
 
         //Magasin
         //http://www.e-leclerc.com/eleclerc_srv_socle_magasin_int/public/v1/magasin_lire_code_panonceau.action?codePanonceau=1892&cachable=true
-/*
+
+
             driver.findElements(By.cssSelector("div.liste_magasins div li"))
                     .stream().map(webElement -> {return webElement.findElement(By.cssSelector("div.liste_magasins ul a[href]")).getAttribute("href");})
                     .forEach(m -> {
-                        log.info(m);
-                    });
-*/
-        driver.get("http://www.e-leclerc.com/magasin/clichy/infospratiques");
-        Magasin mag = new Magasin();
-        mag.setAdresse(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"adresse\"]")).getAttribute("value"));
-        mag.setCp(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"codePostal\"]")).getAttribute("value"));
-        mag.setTel(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"telephone\"]")).getAttribute("value"));
-        mag.setLat(Double.parseDouble(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"latitudeGPS\"]")).getAttribute("value")));
-        mag.setLog(Double.parseDouble(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"longitudeGPS\"]")).getAttribute("value")));
-        mag.setVille(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"ville\"]")).getAttribute("value"));
-        mag.setHoraire(driver.findElement(By.cssSelector("ul.box_blue")).getText());
+                        driver.get(m+"/infospratiques");
+                        Magasin mag = new Magasin();
+                        mag.setAdresse(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"adresse\"]")).getAttribute("value"));
+                        mag.setCp(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"codePostal\"]")).getAttribute("value"));
+                        mag.setTel(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"telephone\"]")).getAttribute("value"));
+                        mag.setLat(Double.parseDouble(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"latitudeGPS\"]")).getAttribute("value")));
+                        mag.setLog(Double.parseDouble(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"longitudeGPS\"]")).getAttribute("value")));
+                        mag.setVille(driver.findElement(By.cssSelector("form#formLongitudeLatitude input[name=\"ville\"]")).getAttribute("value"));
+                        mag.setHoraire(driver.findElement(By.cssSelector("ul.box_blue")).getText());
+                        mag.setUrl(m);
+                        mag.setLibelle(driver.findElement(By.cssSelector("div.adresse h4")).getText());
+                        mag.setUniqueId(m.replace("^.*magasin\\/",""));
 
-/*
+                    });
+
+
+
+
+
         driver.get("http://www.e-leclerc.com/magasin/clichy");
         catUrl=driver.findElements(By.cssSelector("div.content_20569_cT_image.cT_image img[src]")).stream().map(img -> img.getAttribute("src")).map(url -> url.replaceAll("pages.*$", "catalog.xml")).collect(Collectors.toList());
 //                catUrl.get(0).forEach(urlCata -> {
@@ -75,7 +81,7 @@ public class Leclerc {
         cata.setImages(driver.getCurrentUrl().replaceAll("catalog.xml", "pages/")
                 + driver.findElement(By.cssSelector("cover[id]")).getAttribute("zoom"));
         cata.setPages(driver.findElements(By.cssSelector("page[id],cover[id],backcover[id]")).stream()
-                .map(img -> driver.getCurrentUrl().replaceAll("catalog.xml", "pages/") + img.getAttribute("zoom")).reduce("", (a, b) -> a + ";" + b));
+                .map(img -> driver.getCurrentUrl().replaceAll("catalog.xml", "pages/") + img.getAttribute("zoom")).reduce("", (a, b) -> (a.length()==0)?b:a.concat(";").concat(b)));
 
         EntityManager entityManager = entityManagerFactory.createEntityManager();
         entityManager.getTransaction().begin();
@@ -85,7 +91,6 @@ public class Leclerc {
 
         driver.close();
 
-        */
 
         //product
 //        driver.findElements(By.cssSelector("products[base] > product")).stream();
