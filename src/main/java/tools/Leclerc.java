@@ -8,10 +8,13 @@ import org.apache.log4j.Logger;
 import org.openqa.selenium.*;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxProfile;
+import utils.HttpClient.HttpClientManager;
+import utils.scp.ScpClient;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+import java.io.File;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -129,6 +132,8 @@ public class Leclerc {
                     cata.setUniqueId(uniqueID);
                     log.info("uniqueIDDDDDDDDDDDDDDD:" + uniqueID);
 
+                    getImages(cata);
+
                     if (cata.getId() <= 0) {
                         entityManager.persist(cata);
                         mag.getCatalogues().add(cata);
@@ -149,6 +154,7 @@ public class Leclerc {
             entityManager.merge(mag);
             entityManager.flush();
 
+//            break;
 
         };
 
@@ -184,6 +190,35 @@ public class Leclerc {
 
 //        log.info("sssssssssssssssss"+catUrl.get(0));
 
+    }
+
+    public void getImages(Catalogue cata) {
+        ScpClient scpClient = new ScpClient("94.23.63.229","FJKKnaVy68T5vtReSykF");
+        String pathLocal = "C:\\Users\\jzhang\\Desktop\\tmp.jpg";
+        String pathBase = "/home/prod/projects/pige-crawler-catalogue2/web/uploads/data/";
+        String pathCata = "ens_test/cat_" + cata.getUniqueId().replaceAll("[^a-zA-Z0-9]","-").toLowerCase();
+        HttpClientManager httpClient = new HttpClientManager();
+        if (scpClient.mkdir(pathBase + pathCata)) {
+            httpClient.download(pathLocal, cata.getImages());
+            scpClient.scpUpload(pathBase + pathCata,new File(pathLocal),"cover.jpg");
+            cata.setImages(pathCata+"/cover.jpg");
+
+            log.info(pathCata+"/cover.jpg");
+
+            int pageNumber = 0;
+            for (String url:cata.getPages().split(";")) {
+                httpClient.download(pathLocal, url);
+//                log.info(pageNumber+"/"+pageNumber);
+                scpClient.scpUpload(pathBase + pathCata, new File(pathLocal), "page" + (++pageNumber) + ".jpg");
+            }
+            String pages = "";
+            for (int page=1;page<=pageNumber;page++) {
+                pages += pathCata + "/page" + page + ".jpg;";
+            }
+            cata.setPages(pages.substring(0,pages.length()-1));
+
+        }
+        scpClient.close();
     }
 
     public void chooseMagasin(){
