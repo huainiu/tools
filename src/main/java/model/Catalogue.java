@@ -1,20 +1,21 @@
 package model;
 
-import javax.persistence.Basic;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by jzhang on 06/03/2015.
  */
 @Entity
+@NamedQuery(name="Catalogue.findCatalogueByUniqueId", query="SELECT c FROM Catalogue c WHERE c.uniqueId = :uniqueId and c.enseigne_id = :enseigne_id")
 public class Catalogue {
     private int id;
-    private int enseigne_id=1;
-    private String uniqueId="";
+    private int enseigne_id;
+    private String uniqueId;
     private Timestamp dateImport = new Timestamp(new Date().getTime());
     private Timestamp dateExport;
     private String libelle;
@@ -25,9 +26,28 @@ public class Catalogue {
     private String images;
     private String pdfs;
     private String pages;
+//    private Set<Magasin> magasins = new HashSet<Magasin>();
+
+
+    public void setCatalogue(Catalogue c) {
+        this.setId(c.getId());
+        this.setEnseigne_id(c.getEnseigne_id());
+        this.setUniqueId(c.getUniqueId());
+        this.setDateExport(c.getDateExport());
+        this.setLibelle(c.getLibelle());
+        this.setSlug(c.getSlug());
+        this.setDateDebut(c.getDateDebut());
+        this.setDateFin(c.getDateFin());
+        this.setDescription(c.getDescription());
+        this.setImages(c.getImages());
+        this.setPdfs(c.getPdfs());
+        this.setPages(c.getPages());
+//        this.setMagasins(c.getMagasins());
+    }
 
     @Id
     @Column(name = "id")
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     public int getId() {
         return id;
     }
@@ -156,6 +176,16 @@ public class Catalogue {
         this.pages = pages;
     }
 
+/*
+    @ManyToMany(mappedBy = "catalogues")
+    public Set<Magasin> getMagasins() {
+        return magasins;
+    }
+
+    public void setMagasins(Set<Magasin> magasins) {
+        this.magasins = magasins;
+    }
+*/
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

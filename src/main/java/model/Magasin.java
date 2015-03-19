@@ -2,12 +2,16 @@ package model;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Created by jzhang on 06/03/2015.
  */
 @Entity
+@NamedQuery(name="Magasin.findMagasinByUniqueId", query="SELECT m FROM Magasin m WHERE m.uniqueId = :uniqueId and m.enseigne_id = :enseigne_id")
 public class Magasin {
     private int id;
     private String uniqueId;
@@ -27,10 +31,32 @@ public class Magasin {
     private String horaire;
     private String contact;
     private Timestamp lastUpdateDate = new Timestamp(new Date().getTime());
-    private Enseigne enseigneByEnseigneId;
+    private int enseigne_id;
+    private Set<Catalogue> catalogues=new HashSet<>();
+
+    public void setMagasin(Magasin m) {
+        this.setId(m.getId());
+        this.setUniqueId(m.getUniqueId());
+        this.setLibelle(m.getLibelle());
+        this.setSlug(m.getSlug());
+        this.setAdresse(m.getAdresse());
+        this.setCp(m.getCp());
+        this.setVille(m.getVille());
+        this.setDepartement(m.getDepartement());
+        this.setMagIdExport(m.getMagIdExport());
+        this.setLat(m.getLat());
+        this.setLog(m.getLog());
+        this.setTel(m.getTel());
+        this.setFax(m.getFax());
+        this.setHoraire(m.getHoraire());
+        this.setContact(m.getContact());
+        this.setEnseigne_id(m.getEnseigne_id());
+        this.setCatalogues(m.getCatalogues());
+    }
 
     @Id
     @Column(name = "id")
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     public int getId() {
         return id;
     }
@@ -56,7 +82,7 @@ public class Magasin {
     }
 
     public void setLibelle(String libelle) {
-        this.libelle = libelle;
+        this.libelle = libelle.trim();
     }
 
     @Basic
@@ -166,7 +192,7 @@ public class Magasin {
     }
 
     public void setTel(String tel) {
-        this.tel = tel;
+        this.tel = tel.replaceAll(" ","").replaceAll("\\.","");
     }
 
     @Basic
@@ -176,7 +202,7 @@ public class Magasin {
     }
 
     public void setFax(String fax) {
-        this.fax = fax;
+        this.fax = fax.replaceAll(" ","").replaceAll("\\.","");
     }
 
     @Basic
@@ -208,6 +234,18 @@ public class Magasin {
     public void setLastUpdateDate(Timestamp lastUpdateDate) {
         this.lastUpdateDate = lastUpdateDate;
     }
+
+    @ManyToMany
+    @JoinTable(name = "magasincatalogue", joinColumns = { @JoinColumn(name = "magasin_id", referencedColumnName = "id")},
+            inverseJoinColumns = {@JoinColumn(name = "catalogue_id", referencedColumnName = "id")})
+    public Set<Catalogue> getCatalogues() {
+        return catalogues;
+    }
+
+    public void setCatalogues(Set<Catalogue> catalogues) {
+        this.catalogues = catalogues;
+    }
+
 
     @Override
     public boolean equals(Object o) {
@@ -262,13 +300,12 @@ public class Magasin {
         return result;
     }
 
-    @ManyToOne
-    @JoinColumn(name = "enseigne_id", referencedColumnName = "id", nullable = false)
-    public Enseigne getEnseigneByEnseigneId() {
-        return enseigneByEnseigneId;
+    @Basic
+    @Column(name = "enseigne_id")
+    public int getEnseigne_id() {
+        return enseigne_id;
     }
-
-    public void setEnseigneByEnseigneId(Enseigne enseigneByEnseigneId) {
-        this.enseigneByEnseigneId = enseigneByEnseigneId;
+    public void setEnseigne_id(int enseigne_id) {
+        this.enseigne_id = enseigne_id;
     }
 }
