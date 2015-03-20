@@ -1,25 +1,37 @@
 package model;
 
-import javax.persistence.Basic;
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.math.BigDecimal;
 
 /**
  * Created by jzhang on 06/03/2015.
  */
 @Entity
+@NamedQuery(name="Occurence.findOccurenceByUniqueId", query="SELECT o FROM Occurence o WHERE o.uniqueId = :uniqueId and o.catalogueId = :catalogueId")
 public class Occurence {
     private int id;
 
     @Id
     @javax.persistence.Column(name = "id")
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     public int getId() {
         return id;
     }
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    private int catalogueId;
+
+    @Basic
+    @javax.persistence.Column(name = "catalogue_id")
+    public int getCatalogueId() {
+        return catalogueId;
+    }
+
+    public void setCatalogueIdId(int catalogueId) {
+        this.catalogueId = catalogueId;
     }
 
     private String uniqueId;
@@ -314,5 +326,29 @@ public class Occurence {
         result = 31 * result + (sousSegment != null ? sousSegment.hashCode() : 0);
         result = 31 * result + (descriptionPromo != null ? descriptionPromo.hashCode() : 0);
         return result;
+    }
+
+    public void setOccurence(Occurence o) {
+        this.uniqueId = o.getUniqueId();
+        this.page = o.getPage();
+        this.libelleShort = o.getLibelleShort();
+        this.libelleLong = o.getLibelleLong();
+        this.ean = o.getEan();
+        this.slug = o.getSlug();
+        this.productUniqueId = o.getProductUniqueId();
+        this.priceBeforePromo = o.getPriceBeforePromo();
+        this.priceAfterPromo = o.getPriceAfterPromo();
+        this.descriptionShort = o.getDescriptionShort();
+        this.descriptionLong = o.getDescriptionLong();
+        this.legalText1 = o.getLegalText1();
+        this.legalText2 = o.getLegalText2();
+        this.validityText = o.getValidityText();
+        this.category = o.getCategory();
+        this.rayon = o.getRayon();
+        this.segment = o.getSegment();
+        this.sousSegment = o.getSousSegment();
+        this.descriptionPromo = o.getDescriptionPromo();
+        this.catalogueId = o.getCatalogueId();
+        this.id = o.getId();
     }
 }

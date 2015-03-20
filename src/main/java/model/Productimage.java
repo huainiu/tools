@@ -6,14 +6,16 @@ import javax.persistence.*;
  * Created by jzhang on 06/03/2015.
  */
 @Entity
+@NamedQuery(name="Productimage.findProductimageByUniqueId", query="SELECT p FROM Productimage p WHERE p.productUniqueId = :productUniqueId and p.catalogueId = :catalogueId")
 public class Productimage {
     private int id;
     private String productUniqueId;
+    private int catalogueId;
     private String images;
-    private Catalogue catalogueByCatalogueId;
 
     @Id
     @Column(name = "id")
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     public int getId() {
         return id;
     }
@@ -30,6 +32,16 @@ public class Productimage {
 
     public void setProductUniqueId(String productUniqueId) {
         this.productUniqueId = productUniqueId;
+    }
+
+    @Basic
+    @javax.persistence.Column(name = "catalogue_id")
+    public int getCatalogueId() {
+        return catalogueId;
+    }
+
+    public void setCatalogueIdId(int catalogueId) {
+        this.catalogueId = catalogueId;
     }
 
     @Basic
@@ -65,13 +77,12 @@ public class Productimage {
         return result;
     }
 
-    @ManyToOne
-    @JoinColumn(name = "catalogue_id", referencedColumnName = "id", nullable = false)
-    public Catalogue getCatalogueByCatalogueId() {
-        return catalogueByCatalogueId;
+    public void setProductimage(Productimage p) {
+        this.productUniqueId = p.getProductUniqueId();
+        this.images = p.getImages();
+        this.catalogueId = p.getCatalogueId();
+        this.id = p.getId();
     }
 
-    public void setCatalogueByCatalogueId(Catalogue catalogueByCatalogueId) {
-        this.catalogueByCatalogueId = catalogueByCatalogueId;
-    }
+
 }

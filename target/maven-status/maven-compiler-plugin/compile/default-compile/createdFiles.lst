@@ -1,0 +1,12 @@
+model\MagasincatalogueEntityPK.class
+model\MagasinEntity.class
+utils\javamail\MailManager.class
+model\MagasincatalogueEntity.class
+model\CatalogueEntity.class
+tools\AlertFtpSuperU.class
+model\OccurenceEntity.class
+model\EnseigneEntity.class
+utils\file\FileManager.class
+utils\ftp\FtpClient.class
+tools\Leclerc.class
+model\ProductimageEntity.class

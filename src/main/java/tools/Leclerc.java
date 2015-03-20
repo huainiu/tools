@@ -1,10 +1,10 @@
 package tools;
 
 import com.beust.jcommander.internal.Lists;
-import model.Catalogue;
-import model.Enseigne;
-import model.Magasin;
+import model.*;
 import org.apache.log4j.Logger;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.openqa.selenium.*;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxProfile;
@@ -15,6 +15,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import java.io.File;
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -39,35 +41,27 @@ public class Leclerc {
         profile.setPreference("browser.link.open_newwindow.restriction", 1);
         profile.setPreference("permissions.default.image", 2);
 
-
         WebDriver driver = new FirefoxDriver(profile);
         driver.manage().timeouts().pageLoadTimeout(10, TimeUnit.SECONDS);
-//        DesiredCapabilities capabilities = DesiredCapabilities.phantomjs();
-//        WebDriver driver = new PhantomJSDriver(capabilities);
 
+        List<String> cataUniq = Lists.newArrayList();
 
-        driver.get("http://www.e-leclerc.com/catalogue/magasins");
+        List<String> l = Lists.newArrayList();
+        try {
+            Document doc = Jsoup.connect("http://www.e-leclerc.com/catalogue/magasins").get();
+            l = doc.select("div.box-liste-magasins div.magasin a.button[href]").stream().map(docUrl -> docUrl.absUrl("href")).collect(Collectors.toList());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-            List<String> catUrl = Lists.newArrayList();
-
-
-        //Magasin
-        //http://www.e-leclerc.com/eleclerc_srv_socle_magasin_int/public/v1/magasin_lire_code_panonceau.action?codePanonceau=1892&cachable=true
-
-
-        List<String> l = driver.findElements(By.cssSelector("div.box-liste-magasins div.magasin")).parallelStream()
-                    .map(webElement -> webElement.findElement(By.cssSelector("div.magasin  a.button[href]")).getAttribute("href")).collect(Collectors.toList());
-
-//        List<String> l = Lists.newArrayList();
-//        l.add(driver.findElement(By.cssSelector("div.box-liste-magasins div.magasin")).findElement(By.cssSelector("div.magasin  a.button[href]")).getAttribute("href"));
-
-//        l.clear();
-//        l.add("http://www.e-leclerc.com/landerneau");
         Enseigne leclercTest = entityManager.find(Enseigne.class, 11);
 
         int i = 0;
 
+        //get catelogue : http://nos-catalogues-promos.e-leclerc.com/Leclerc/shops/0201/config/config.xml?t=1424696075946
+
         for (String url : l) {
+
             //get the store's information
             driver.get(url + "/infos-magasins");
             if (!driver.getCurrentUrl().startsWith(url)) continue;
@@ -83,6 +77,7 @@ public class Leclerc {
             try {
                 mag.setUniqueId(url.replace("^.*magasin\\/", ""));
                 mag.setEnseigne_id(leclercTest.getId());
+
                 mag.setAdresse(driver.findElement(By.cssSelector("span[itemprop=\"streetAddress\"][ng-show=\"magasin.coordonnee.voie\"]")).getText());
                 mag.setCp(driver.findElement(By.cssSelector("span[itemprop=\"postalCode\"]")).getText());
                 mag.setTel(driver.findElement(By.cssSelector("span[itemprop=\"telephone\"]")).getText());
@@ -102,20 +97,25 @@ public class Leclerc {
 
             //get the catalogues
             driver.get(url + "/promotions/Prospectus");
+            String codeCata = driver.findElement(By.cssSelector("taggage")).getAttribute("data-xtn2");
             List<WebElement> ListE = driver.findElements(By.cssSelector("section[ng-if=\"prospectus\"] ul.liste-prospectus li.li-prospectus"));
 
-            for (WebElement cataEle:ListE) {
-
-                WebDriver driverTmp = new FirefoxDriver();
+            for (WebElement cataEle:ListE)
                 try {
 
                     final Catalogue cata = new Catalogue();
-                    driverTmp.manage().timeouts().pageLoadTimeout(10, TimeUnit.SECONDS);
-
                     cata.setImages(cataEle.findElement(By.cssSelector("img")).getAttribute("src"));
-                    driverTmp.get(cata.getImages().replaceAll("pages.*$", "catalog.xml"));
-                    String uniqueID = driverTmp.findElement(By.cssSelector("catalog")).getAttribute("operation_code_el")
-                            + "-" + driverTmp.findElement(By.cssSelector("catalog")).getAttribute("id");
+
+                    String urlCata = cata.getImages().replaceAll("pages.*$", "catalog.xml");
+                    Document doc = Jsoup.connect(urlCata).get();
+                    String uniqueID = doc.select("catalog").attr("operation_code_el")
+                            + "-" + doc.select("catalog").attr("id");
+
+                    //tester si c'est un catalogue deja crawlé
+                    if (!cataUniq.contains(uniqueID)) cataUniq.add(uniqueID);
+
+                    log.info(uniqueID);
+                    log.info(urlCata);
 
                     //charger les catalogues existants
                     List<Catalogue> listC = entityManager.createNamedQuery("Catalogue.findCatalogueByUniqueId")
@@ -123,16 +123,24 @@ public class Leclerc {
                             .setParameter("enseigne_id", leclercTest.getId()).getResultList();
                     if (listC.size() > 0) cata.setCatalogue(listC.get(0));
 
+                    //MAJ le titre
+                    log.info("dddddttttttttttttttttt:" + Jsoup.connect("http://nos-catalogues-promos.e-leclerc.com/Leclerc/" +
+                            cataEle.findElement(By.cssSelector("a[data-codeop]")).getAttribute("data-codeop")+"/" +
+                            codeCata).get().select("div.cata_info").text().trim());
+
                     //MAJ le catalogue
                     cata.setLibelle(cataEle.findElement(By.cssSelector("p.ng-binding")).getText());
                     cata.setEnseigne_id(leclercTest.getId());
-                    cata.setPages(driverTmp.findElements(By.cssSelector("page[id],cover[id],backcover[id]")).stream()
-                            .map(img -> driverTmp.getCurrentUrl().replaceAll("catalog.xml", "pages/") + img.getAttribute("zoom"))
+                    cata.setPages(doc.select("page[id],cover[id],backcover[id]").stream()
+                            .map(img -> urlCata.replaceAll("catalog.xml", "pages/") + img.attr("zoom"))
                             .reduce("", (a, b) -> (a.length() == 0) ? b : a.concat(";").concat(b)));
                     cata.setUniqueId(uniqueID);
                     log.info("uniqueIDDDDDDDDDDDDDDD:" + uniqueID);
 
-                    getImages(cata);
+                    getImagesCatalogue(cata);
+
+
+
 
                     if (cata.getId() <= 0) {
                         entityManager.persist(cata);
@@ -143,39 +151,51 @@ public class Leclerc {
                             mag.getCatalogues().add(cata);
                     }
                     entityManager.flush();
+
+                    //produits
+                    if (!cataUniq.contains(uniqueID)) doc.select("products[base] > product").stream().forEach(p -> {
+                        Occurence o = new Occurence();
+                        List<Occurence> listO = entityManager.createNamedQuery("Occurence.findOccurenceByUniqueId")
+                                .setParameter("uniqueId", p.select("product").attr("id"))
+                                .setParameter("catalogueId", cata.getId()).getResultList();
+                        if (listO.size() > 0) o.setOccurence(listO.get(0));
+
+                        o.setProductUniqueId(p.select("product").attr("id"));
+                        o.setUniqueId(p.select("product").attr("id"));
+                        o.setPage(p.select("product").attr("pageId"));
+                        o.setDescriptionLong(p.select("description").text());
+                        o.setLibelleShort(p.select("title").text());
+                        o.setPriceAfterPromo(new BigDecimal(p.select("prix").text()).movePointLeft(2));
+                        o.setPriceAfterPromo(new BigDecimal(p.select("prix_hors_promotion").text()).movePointLeft(2));
+                        o.setCatalogueIdId(cata.getId());
+                        if (o.getId() <= 0) entityManager.persist(o);
+                            else entityManager.merge(o);
+
+                        Productimage pImage = new Productimage();
+                        List<Productimage> listP = entityManager.createNamedQuery("Productimage.findProductimageByUniqueId")
+                                .setParameter("productUniqueId", p.select("product").attr("id"))
+                                .setParameter("catalogueId", cata.getId()).getResultList();
+                        if (listP.size() > 0) pImage.setProductimage(listP.get(0));
+                        pImage.setCatalogueIdId(cata.getId());
+                        pImage.setProductUniqueId(p.select("product").attr("id"));
+                        pImage.setImages(urlCata.replace("catalogs.*$","") + "products/" +
+                                doc.select("zoomimages").attr("base")+doc.select("zoomimages url").text());
+                        getImagesProducts(pImage,cata);
+                        if (pImage.getId() <= 0) entityManager.persist(pImage);
+                        else entityManager.merge(pImage);
+
+
+                    });
+
+
+
                 } catch (Exception e) {
                     continue;
-                } finally {
-                    driverTmp.close();
                 }
-
-
-            };
+            ;
             entityManager.merge(mag);
             entityManager.flush();
-
-//            break;
-
         };
-
-
-
-
-
-//        driver.get("http://www.e-leclerc.com/magasin/clichy");
-//        catUrl=driver.findElements(By.cssSelector("div.content_20569_cT_image.cT_image img[src]")).stream().map(img -> img.getAttribute("src")).map(url -> url.replaceAll("pages.*$", "catalog.xml")).collect(Collectors.toList());
-//                catUrl.get(0).forEach(urlCata -> {
-
-//        driver.get(catUrl.get(0));
-
-        //cata page
-/*        Catalogue cata = new Catalogue();
-        cata.setImages(driver.getCurrentUrl().replaceAll("catalog.xml", "pages/")
-                + driver.findElement(By.cssSelector("cover[id]")).getAttribute("zoom"));
-        cata.setPages(driver.findElements(By.cssSelector("page[id],cover[id],backcover[id]")).stream()
-                .map(img -> driver.getCurrentUrl().replaceAll("catalog.xml", "pages/") + img.getAttribute("zoom")).reduce("", (a, b) -> (a.length()==0)?b:a.concat(";").concat(b)));
-*/
-
 
         entityManager.getTransaction().commit();
         entityManager.close();
@@ -192,7 +212,21 @@ public class Leclerc {
 
     }
 
-    public void getImages(Catalogue cata) {
+    public void getImagesProducts(Productimage p,Catalogue cata){
+        ScpClient scpClient = new ScpClient("94.23.63.229","FJKKnaVy68T5vtReSykF");
+        String pathLocal = "C:\\Users\\jzhang\\Desktop\\tmp.jpg";
+        String pathBase = "/home/prod/projects/pige-crawler-catalogue2/web/uploads/data/";
+        String pathCata = "ens_test/cat_" + cata.getUniqueId().replaceAll("[^a-zA-Z0-9]","-").toLowerCase();
+        HttpClientManager httpClient = new HttpClientManager();
+        if (scpClient.mkdir(pathBase + pathCata + "/products")) {
+            httpClient.download(pathLocal, p.getImages());
+            scpClient.scpUpload(pathBase + pathCata,new File(pathLocal),"product-" + p.getProductUniqueId() + "-image-1.jpg");
+            p.setImages(pathCata + "/products/product-" + p.getProductUniqueId() + "-image-1.jpg");
+        }
+        scpClient.close();
+    }
+
+    public void getImagesCatalogue(Catalogue cata) {
         ScpClient scpClient = new ScpClient("94.23.63.229","FJKKnaVy68T5vtReSykF");
         String pathLocal = "C:\\Users\\jzhang\\Desktop\\tmp.jpg";
         String pathBase = "/home/prod/projects/pige-crawler-catalogue2/web/uploads/data/";
@@ -221,9 +255,6 @@ public class Leclerc {
         scpClient.close();
     }
 
-    public void chooseMagasin(){
-
-    }
     public static void main(String[] args) {
         new Leclerc();
     }
