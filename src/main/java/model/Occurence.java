@@ -30,7 +30,7 @@ public class Occurence {
         return catalogueId;
     }
 
-    public void setCatalogueIdId(int catalogueId) {
+    public void setCatalogueId(int catalogueId) {
         this.catalogueId = catalogueId;
     }
 
@@ -67,7 +67,7 @@ public class Occurence {
     }
 
     public void setLibelleShort(String libelleShort) {
-        this.libelleShort = libelleShort;
+        this.libelleShort = libelleShort.replaceFirst("^.*\\[","").replaceFirst("].*$","");
     }
 
     private String libelleLong;
@@ -79,7 +79,7 @@ public class Occurence {
     }
 
     public void setLibelleLong(String libelleLong) {
-        this.libelleLong = libelleLong;
+        this.libelleLong = libelleLong.replaceFirst("^.*\\[","").replaceFirst("].*$","");
     }
 
     private String ean;
@@ -151,7 +151,7 @@ public class Occurence {
     }
 
     public void setDescriptionShort(String descriptionShort) {
-        this.descriptionShort = descriptionShort;
+        this.descriptionShort = descriptionShort.replaceFirst("^.*\\[","").replaceFirst("].*$","");
     }
 
     private String descriptionLong;
@@ -163,7 +163,7 @@ public class Occurence {
     }
 
     public void setDescriptionLong(String descriptionLong) {
-        this.descriptionLong = descriptionLong;
+        this.descriptionLong = descriptionLong.replaceFirst("^.*\\[","").replaceFirst("].*$","");
     }
 
     private String legalText1;
@@ -175,7 +175,7 @@ public class Occurence {
     }
 
     public void setLegalText1(String legalText1) {
-        this.legalText1 = legalText1;
+        this.legalText1 = legalText1.replaceFirst("^.*\\[","").replaceFirst("].*$","");
     }
 
     private String legalText2;
@@ -187,7 +187,7 @@ public class Occurence {
     }
 
     public void setLegalText2(String legalText2) {
-        this.legalText2 = legalText2;
+        this.legalText2 = legalText2.replaceFirst("^.*\\[","").replaceFirst("].*$","");
     }
 
     private String validityText;
@@ -199,7 +199,7 @@ public class Occurence {
     }
 
     public void setValidityText(String validityText) {
-        this.validityText = validityText;
+        this.validityText = validityText.replaceFirst("^.*\\[","").replaceFirst("].*$","");
     }
 
     private String category;
@@ -259,7 +259,7 @@ public class Occurence {
     }
 
     public void setDescriptionPromo(String descriptionPromo) {
-        this.descriptionPromo = descriptionPromo;
+        this.descriptionPromo = descriptionPromo.replaceFirst("^.*\\[","").replaceFirst("].*$","");
     }
 
     @Override
@@ -351,4 +351,6 @@ public class Occurence {
         this.catalogueId = o.getCatalogueId();
         this.id = o.getId();
     }
+
+
 }

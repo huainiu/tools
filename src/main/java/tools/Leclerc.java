@@ -17,6 +17,8 @@ import javax.persistence.Persistence;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -42,9 +44,7 @@ public class Leclerc {
         profile.setPreference("permissions.default.image", 2);
 
         WebDriver driver = new FirefoxDriver(profile);
-        driver.manage().timeouts().pageLoadTimeout(10, TimeUnit.SECONDS);
-
-        List<String> cataUniq = Lists.newArrayList();
+        driver.manage().timeouts().pageLoadTimeout(20, TimeUnit.SECONDS);
 
         List<String> l = Lists.newArrayList();
         try {
@@ -111,9 +111,6 @@ public class Leclerc {
                     String uniqueID = doc.select("catalog").attr("operation_code_el")
                             + "-" + doc.select("catalog").attr("id");
 
-                    //tester si c'est un catalogue deja crawlé
-                    if (!cataUniq.contains(uniqueID)) cataUniq.add(uniqueID);
-
                     log.info(uniqueID);
                     log.info(urlCata);
 
@@ -123,24 +120,21 @@ public class Leclerc {
                             .setParameter("enseigne_id", leclercTest.getId()).getResultList();
                     if (listC.size() > 0) cata.setCatalogue(listC.get(0));
 
-                    //MAJ le titre
-                    log.info("dddddttttttttttttttttt:" + Jsoup.connect("http://nos-catalogues-promos.e-leclerc.com/Leclerc/" +
-                            cataEle.findElement(By.cssSelector("a[data-codeop]")).getAttribute("data-codeop")+"/" +
-                            codeCata).get().select("div.cata_info").text().trim());
-
                     //MAJ le catalogue
-                    cata.setLibelle(cataEle.findElement(By.cssSelector("p.ng-binding")).getText());
+                    cata.setLibelle(Jsoup.connect("http://nos-catalogues-promos.e-leclerc.com/Leclerc/" +
+                            cataEle.findElement(By.cssSelector("a[data-codeop]")).getAttribute("data-codeop") + "/" +
+                            codeCata).get().select("div.cata_info").text().replaceFirst("(?s)Offre valable.*$", "").trim() + " - " +
+                            cataEle.findElement(By.cssSelector("p.ng-binding")).getText());
                     cata.setEnseigne_id(leclercTest.getId());
-                    cata.setPages(doc.select("page[id],cover[id],backcover[id]").stream()
+                    if (cata.getId()<=0) cata.setPages(doc.select("page[id],cover[id],backcover[id]").stream()
                             .map(img -> urlCata.replaceAll("catalog.xml", "pages/") + img.attr("zoom"))
                             .reduce("", (a, b) -> (a.length() == 0) ? b : a.concat(";").concat(b)));
                     cata.setUniqueId(uniqueID);
                     log.info("uniqueIDDDDDDDDDDDDDDD:" + uniqueID);
 
-                    getImagesCatalogue(cata);
+                    log.info(cata.getPages());
 
-
-
+                    boolean isNewCata = getImagesCatalogue(cata);
 
                     if (cata.getId() <= 0) {
                         entityManager.persist(cata);
@@ -153,48 +147,63 @@ public class Leclerc {
                     entityManager.flush();
 
                     //produits
-                    if (!cataUniq.contains(uniqueID)) doc.select("products[base] > product").stream().forEach(p -> {
-                        Occurence o = new Occurence();
-                        List<Occurence> listO = entityManager.createNamedQuery("Occurence.findOccurenceByUniqueId")
-                                .setParameter("uniqueId", p.select("product").attr("id"))
-                                .setParameter("catalogueId", cata.getId()).getResultList();
-                        if (listO.size() > 0) o.setOccurence(listO.get(0));
+                    if (isNewCata) doc.select("products[base] > product").stream().forEach(p -> {
+                        try {
+                            Occurence o = new Occurence();
+                            List<Occurence> listO = entityManager.createNamedQuery("Occurence.findOccurenceByUniqueId")
+                                    .setParameter("uniqueId", p.select("product").attr("id"))
+                                    .setParameter("catalogueId", cata.getId()).getResultList();
+                            if (listO.size() > 0) o.setOccurence(listO.get(0));
 
-                        o.setProductUniqueId(p.select("product").attr("id"));
-                        o.setUniqueId(p.select("product").attr("id"));
-                        o.setPage(p.select("product").attr("pageId"));
-                        o.setDescriptionLong(p.select("description").text());
-                        o.setLibelleShort(p.select("title").text());
-                        o.setPriceAfterPromo(new BigDecimal(p.select("prix").text()).movePointLeft(2));
-                        o.setPriceAfterPromo(new BigDecimal(p.select("prix_hors_promotion").text()).movePointLeft(2));
-                        o.setCatalogueIdId(cata.getId());
-                        if (o.getId() <= 0) entityManager.persist(o);
+                            o.setProductUniqueId(p.select("product").attr("id"));
+                            o.setUniqueId(p.select("product").attr("id"));
+                            o.setPage(p.select("product").attr("pageId"));
+                            o.setDescriptionLong(p.select("description").text());
+                            o.setLibelleShort(p.select("title").first().text());
+                            if (p.select("prix").size() > 0)
+                                o.setPriceAfterPromo(new BigDecimal(p.select("prix").text()).movePointLeft(2));
+                            if (p.select("prix_hors_promotion").size() > 0)
+                                o.setPriceAfterPromo(new BigDecimal(p.select("prix_hors_promotion").text()).movePointLeft(2));
+                            o.setCatalogueId(cata.getId());
+                            if (o.getId() <= 0) entityManager.persist(o);
                             else entityManager.merge(o);
 
-                        Productimage pImage = new Productimage();
-                        List<Productimage> listP = entityManager.createNamedQuery("Productimage.findProductimageByUniqueId")
-                                .setParameter("productUniqueId", p.select("product").attr("id"))
-                                .setParameter("catalogueId", cata.getId()).getResultList();
-                        if (listP.size() > 0) pImage.setProductimage(listP.get(0));
-                        pImage.setCatalogueIdId(cata.getId());
-                        pImage.setProductUniqueId(p.select("product").attr("id"));
-                        pImage.setImages(urlCata.replace("catalogs.*$","") + "products/" +
-                                doc.select("zoomimages").attr("base")+doc.select("zoomimages url").text());
-                        getImagesProducts(pImage,cata);
-                        if (pImage.getId() <= 0) entityManager.persist(pImage);
-                        else entityManager.merge(pImage);
 
+                            log.info(o.getLibelleShort());
 
+                            Productimage pImage = new Productimage();
+                            List<Productimage> listP = entityManager.createNamedQuery("Productimage.findProductimageByUniqueId")
+                                    .setParameter("productUniqueId", p.select("product").attr("id"))
+                                    .setParameter("catalogueId", cata.getId()).getResultList();
+                            if (listP.size() > 0) pImage.setProductimage(listP.get(0));
+                            pImage.setCatalogueId(cata.getId());
+                            pImage.setProductUniqueId(p.select("product").attr("id"));
+                            if (pImage.getId() <= 0) {
+                                pImage.setImages(urlCata.replaceAll("catalogs.*$", "") + "products/" +
+                                        doc.select("zoomimages").first().attr("base") + doc.select("zoomimages url").first().text());
+                                getImagesProducts(pImage, cata);
+                            }
+                            if (pImage.getId() <= 0) entityManager.persist(pImage);
+                            else entityManager.merge(pImage);
+                        } catch (Exception e) {
+                            log.info(e.getStackTrace());
+                        }
                     });
 
 
 
                 } catch (Exception e) {
+                    entityManager.getTransaction().commit();
+                    entityManager.close();
+                    log.info(e.getStackTrace());
                     continue;
                 }
-            ;
+
             entityManager.merge(mag);
             entityManager.flush();
+
+
+
         };
 
         entityManager.getTransaction().commit();
@@ -202,13 +211,6 @@ public class Leclerc {
 
         driver.close();
 
-
-        //product
-//        driver.findElements(By.cssSelector("products[base] > product")).stream();
-
-  //              });
-
-//        log.info("sssssssssssssssss"+catUrl.get(0));
 
     }
 
@@ -218,17 +220,21 @@ public class Leclerc {
         String pathBase = "/home/prod/projects/pige-crawler-catalogue2/web/uploads/data/";
         String pathCata = "ens_test/cat_" + cata.getUniqueId().replaceAll("[^a-zA-Z0-9]","-").toLowerCase();
         HttpClientManager httpClient = new HttpClientManager();
-        if (scpClient.mkdir(pathBase + pathCata + "/products")) {
-            httpClient.download(pathLocal, p.getImages());
-            scpClient.scpUpload(pathBase + pathCata,new File(pathLocal),"product-" + p.getProductUniqueId() + "-image-1.jpg");
-            p.setImages(pathCata + "/products/product-" + p.getProductUniqueId() + "-image-1.jpg");
-        }
+        scpClient.mkdir(pathBase + pathCata + "/products");
+
+        log.info(p.getImages());
+        log.info(p.getProductUniqueId());
+
+        httpClient.download(pathLocal, p.getImages());
+        scpClient.scpUpload(pathBase + pathCata + "/products",new File(pathLocal),"product-" + p.getProductUniqueId() + "-image-1.jpg");
+        p.setImages(pathCata + "/products/product-" + p.getProductUniqueId() + "-image-1.jpg");
+
         scpClient.close();
     }
 
-    public void getImagesCatalogue(Catalogue cata) {
+    public boolean getImagesCatalogue(Catalogue cata) {
         ScpClient scpClient = new ScpClient("94.23.63.229","FJKKnaVy68T5vtReSykF");
-        String pathLocal = "C:\\Users\\jzhang\\Desktop\\tmp.jpg";
+        String pathLocal = "C:\\Users\\jzhang\\Desktop\\tmp";
         String pathBase = "/home/prod/projects/pige-crawler-catalogue2/web/uploads/data/";
         String pathCata = "ens_test/cat_" + cata.getUniqueId().replaceAll("[^a-zA-Z0-9]","-").toLowerCase();
         HttpClientManager httpClient = new HttpClientManager();
@@ -240,19 +246,30 @@ public class Leclerc {
             log.info(pathCata+"/cover.jpg");
 
             int pageNumber = 0;
+/*            Arrays.asList((cata.getPages().split(";"))).parallelStream().forEach(url -> {
+                log.info(url.replaceFirst("^.*zoom/","").replaceFirst("\\..*$",""));
+                new HttpClientManager().download(pathLocal + url.replaceFirst("^.*zoom/", "").replaceFirst("\\..*$", ""), url);
+                scpClient.scpUpload(pathBase + pathCata, new File(pathLocal+url.replaceFirst("^.*zoom/","").replaceFirst("\\..*$","")), "page" + url.replaceFirst("^.*zoom/","").replaceFirst("\\..*$","") + ".jpg");
+            });
+*/
+
             for (String url:cata.getPages().split(";")) {
                 httpClient.download(pathLocal, url);
-//                log.info(pageNumber+"/"+pageNumber);
                 scpClient.scpUpload(pathBase + pathCata, new File(pathLocal), "page" + (++pageNumber) + ".jpg");
             }
+
             String pages = "";
-            for (int page=1;page<=pageNumber;page++) {
+            for (int page=1;page<=(cata.getPages().split(";").length);page++) {
                 pages += pathCata + "/page" + page + ".jpg;";
             }
             cata.setPages(pages.substring(0,pages.length()-1));
-
+            scpClient.close();
+            return true;
+        } else {
+            scpClient.close();
+            return false;
         }
-        scpClient.close();
+
     }
 
     public static void main(String[] args) {

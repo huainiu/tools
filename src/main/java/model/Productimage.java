@@ -10,8 +10,8 @@ import javax.persistence.*;
 public class Productimage {
     private int id;
     private String productUniqueId;
-    private int catalogueId;
     private String images;
+    private int catalogueId;
 
     @Id
     @Column(name = "id")
@@ -24,6 +24,17 @@ public class Productimage {
         this.id = id;
     }
 
+
+    @Basic
+    @Column(name = "catalogue_id")
+    public int getCatalogueId() {
+        return catalogueId;
+    }
+
+    public void setCatalogueId(int catalogueId) {
+        this.catalogueId = catalogueId;
+    }
+
     @Basic
     @Column(name = "product_unique_id")
     public String getProductUniqueId() {
@@ -34,15 +45,6 @@ public class Productimage {
         this.productUniqueId = productUniqueId;
     }
 
-    @Basic
-    @javax.persistence.Column(name = "catalogue_id")
-    public int getCatalogueId() {
-        return catalogueId;
-    }
-
-    public void setCatalogueIdId(int catalogueId) {
-        this.catalogueId = catalogueId;
-    }
 
     @Basic
     @Column(name = "images")
@@ -83,6 +85,7 @@ public class Productimage {
         this.catalogueId = p.getCatalogueId();
         this.id = p.getId();
     }
+
 
 
 }
